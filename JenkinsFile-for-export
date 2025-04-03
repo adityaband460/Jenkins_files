@@ -1,0 +1,58 @@
+pipeline {
+    agent any
+    environment {
+        BBU_CREDENTIALS = credentials('ssh-bbu-66-34')
+        SM_MACHINE_CREDENTIALS = credentials('sm-machine-66-13')
+    }
+    stages {
+        stage('Remote SSH and Export from SVN') {
+            steps {
+                script {
+                    // set up remote variable for ssh into BBU
+                    def remoteBBU = [ 
+                        name : 'BBU-66-34',
+                        host : '192.168.66.34',
+                        user : BBU_CREDENTIALS_USR,
+                        password : BBU_CREDENTIALS_PSW,
+                        allowAnyHosts : true
+                    ]
+                    
+                    def remoteMidMachine = [
+                        name : 'SM-Machine',
+                        host : '192.168.66.13',
+                        user : SM_MACHINE_CREDENTIALS_USR,
+                        password : SM_MACHINE_CREDENTIALS_PSW,
+                        allowAnyHosts : true
+                        ]
+                    // export to sm machine
+                    
+                    sshCommand remote : remoteMidMachine, command: """
+                    
+                    export SVN_REPO_URL='svn://lte-enh.cdotb.ernet.in/lte-enh-pi/lte-enh-pi-repos/projects/lte-macro/cnfgitem/subsys/enb/g2s3/binary-tags/sw-pkg/'
+                    export MID_FOLDER='~/users/aditya/automation'
+                    export DEST_FOLDER='~/aditya_automation'
+                    
+                    # Check if MID_FOLDER exists, then remove it
+                    if [ ! -d "\$MID_FOLDER" ]; then
+                        mkdir -p "\$MID_FOLDER"
+                        svn export "\$SVN_REPO_URL" "\$MID_FOLDER"
+                    else
+                        echo "Folder '\$MID_FOLDER' already exists. Skipping export."
+                    fi
+                    
+                    # copy to BBU
+
+                    sshpass -p "${remoteBBU.password}" scp -r -o StrictHostKeyChecking=no "\$MID_FOLDER"/* ${remoteBBU.user}@${remoteBBU.host}:"\$DEST_FOLDER"
+                   
+                   echo "copying to remote BBU is complete"
+                    """
+                    
+                    
+                    
+                    
+                }
+                
+            }
+        }
+    }
+}
