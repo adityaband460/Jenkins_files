@@ -25,24 +25,30 @@ pipeline {
                         allowAnyHosts : true
                         ]
                     // export to sm machine
-                    
+                    def SVN_REPO_URL='svn://lte-enh.cdotb.ernet.in/lte-enh-pi/lte-enh-pi-repos/projects/lte-macro/cnfgitem/subsys/enb/g2s3/binary-tags/sw-pkg/'
+                    def MID_FOLDER='/home/sm-team/users/aditya/automation'
+                    def DEST_FOLDER='/root/aditya_automation'
                     sshCommand remote : remoteMidMachine, command: """
                     
-                    export SVN_REPO_URL='svn://lte-enh.cdotb.ernet.in/lte-enh-pi/lte-enh-pi-repos/projects/lte-macro/cnfgitem/subsys/enb/g2s3/binary-tags/sw-pkg/'
-                    export MID_FOLDER='~/users/aditya/automation'
-                    export DEST_FOLDER='~/aditya_automation'
                     
-                    # Check if MID_FOLDER exists, then remove it
-                    if [ ! -d "\$MID_FOLDER" ]; then
-                        mkdir -p "\$MID_FOLDER"
-                        svn export "\$SVN_REPO_URL" "\$MID_FOLDER"
+                    echo '${MID_FOLDER}'
+                    echo ${DEST_FOLDER}
+                    #Check if MID_FOLDER exists then dont export
+                    if [ ! -d ${MID_FOLDER} ]; then
+                    
+                        svn export ${SVN_REPO_URL} ${MID_FOLDER}
                     else
-                        echo "Folder '\$MID_FOLDER' already exists. Skipping export."
+                    
+                        echo "Folder '${MID_FOLDER}' already exists. Skipping export."
                     fi
                     
                     # copy to BBU
 
-                    sshpass -p "${remoteBBU.password}" scp -r -o StrictHostKeyChecking=no "\$MID_FOLDER"/* ${remoteBBU.user}@${remoteBBU.host}:"\$DEST_FOLDER"
+                    # crate appropriate directory before scp command
+                    sshpass -p "${remoteBBU.password}" ssh -o StrictHostKeyChecking=no ${remoteBBU.user}@${remoteBBU.host} "mkdir -p ${DEST_FOLDER}" 
+                    echo "${DEST_FOLDER} created" 
+                    
+                    sshpass -p "${remoteBBU.password}" scp -r -o StrictHostKeyChecking=no "${MID_FOLDER}"/* ${remoteBBU.user}@${remoteBBU.host}:"${DEST_FOLDER}"
                    
                    echo "copying to remote BBU is complete"
                     """
